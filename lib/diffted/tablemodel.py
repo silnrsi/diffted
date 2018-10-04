@@ -1,0 +1,160 @@
+
+from PyQt5 import QtCore, QtGui, QtWidgets
+import csv, os
+from difflib import SequenceMatcher
+
+class DiffRow(list):
+    def __hash__(self):
+        return hash(u"\uFDD0".join(self))
+
+class DitTableModel(QtGui.QStandardItemModel):
+    diffBrush = QtGui.QBrush(QtGui.QColor("red"))
+    insertBrush = QtGui.QBrush(QtGui.QColor("cyan"))
+    deleteBrush = QtGui.QBrush(QtGui.QColor("gray"))
+    whiteBrush = QtGui.QBrush(QtGui.QColor("white"))
+    blackBrush = QtGui.QBrush(QtGui.QColor("black"))
+
+    def __init__(self, parent=None):
+        super(DitTableModel, self).__init__(parent)
+        self.hasDiff = False
+
+    def loadFromCsv(self, fname):
+        self.beginResetModel()
+        self.clear()
+        self.fname = fname
+        with open(fname) as f:
+#            self.dialect = csv.Sniffer().sniff(f.read(1024))
+#            f.seek(0)
+#            rdr = csv.DictReader(f, dialect=self.dialect)
+            rdr = csv.DictReader(f)
+            self.fieldnames = rdr.fieldnames[:]
+            self.setHorizontalHeaderLabels(self.fieldnames)
+            for r in rdr:
+                items = [QtGui.QStandardItem(r[x]) for x in rdr.fieldnames]
+                self.appendRow(items)
+        self.endResetModel()
+
+    def saveCsv(self, fname):
+        with open(fname, "w") as f:
+            writer = csv.DictWriter(f, fieldnames=self.fieldnames, # dialect=self.dialect,
+                        lineterminator = os.linesep, quoting=csv.QUOTE_MINIMAL, quotechar = '"', escapechar = '\\')
+            writer.writeheader()
+            for i in range(self.rowCount()):
+                writer.writerow({self.fieldnames[j]: self.data(self.index(i, j)) for j in range(self.columnCount())})
+
+    def colDiff_(self, orig, new):
+        res = [None] * len(new)
+        m = SequenceMatcher(a=orig, b=new)
+        for t, astart, aend, bstart, bend in m.get_opcodes():
+            for i in range(bstart, bend):
+                res[i] = t
+        return res
+
+    def loadDiffCsv(self, fh):
+        if self.hasDiff:
+            self.dumpDiff()
+        #dialect = csv.Sniffer().sniff(fh.read(1024))
+        #fh.seek(0)
+        rdr = csv.DictReader(fh)
+        diffdata = [DiffRow(r[x] for x in rdr.fieldnames) for r in rdr]
+        maindata = [DiffRow(self.itemFromIndex(self.index(x, y)).text()
+                        for y in range(self.columnCount()))
+                            for x in range(self.rowCount())]
+        m = SequenceMatcher(a=diffdata, b=maindata)
+        inserted = 0    # Yes deleted items are inserted!
+        for t, astart, aend, bstart, bend in m.get_opcodes():
+            # print(t, astart, aend, bstart, bend)
+            alen = aend - astart
+            blen = bend - bstart
+            bstart += inserted
+            if t == 'replace':
+                for i in range(min(alen, blen)):
+                    coldiff = self.colDiff_(diffdata[astart+i], maindata[bstart+i])
+                    for j, c in enumerate(coldiff):
+                        if c is None:
+                            continue
+                        item = self.itemFromIndex(self.index(bstart+i, j))
+                        if c == 'replace':
+                            item.setForeground(self.diffBrush)
+                        elif c == 'insert':
+                            item.setBackground(self.insertBrush)
+                        elif c == 'delete':
+                            item.setBackground(self.deleteBrush)
+                            item.setEditable(False)
+                for i in range(blen - alen):
+                    for j in range(self.columnCount()):
+                        self.itemFromIndex(self.index(bstart+i+alen, j)).setBackground(self.insertBrush)
+                for i in range(alen - blen):
+                    row = [QtGui.QStandardItem(x) for x in diffdata[astart+blen+i]]
+                    self.insertRow(bstart+blen+i, row)
+                    for r in row:
+                        r.setBackground(self.deleteBrush)
+                        r.setEditable(False)
+                    inserted += 1
+            elif t == 'insert':
+                for i in range(blen):
+                    for j in range(self.columnCount()):
+                        self.itemFromIndex(self.index(bstart+i, j)).setBackground(self.insertBrush)
+            elif t == 'delete':
+                for i in range(alen):
+                    row = [QtGui.QStandardItem(x) for x in diffdata[astart+i]]
+                    self.insertRow(bstart+i, row)
+                    for r in row:
+                        r.setBackground(self.deleteBrush)
+                        r.setEditable(False)
+                inserted += alen
+        self.hasDiff = True
+
+    def dumpDiff(self):
+        for i in range(self.rowCount()-1, -1, -1):
+            first = self.item(i, 0)
+            if first.background() == self.deleteBrush:
+                self.removeRow(i)
+                continue
+            for j in range(self.columnCount()):
+                c = self.item(i, j)
+                if c.background() == self.insertBrush:
+                    c.setBackground(self.whiteBrush)
+                elif c.foreground() == self.diffBrush:
+                    c.setForeground(self.blackBrush)
+        self.hasDiff = False
+
+    def findDiffInRow(self, backwards, row, startCol):
+        if backwards:
+            end = -1
+            counter = -1
+        else:
+            end = self.columnCount()
+            counter = 1
+        for i in range(startCol, end, counter):
+            item = self.item(row, i)
+            b = item.background()
+            if b == self.insertBrush or b == self.deleteBrush or item.foreground() == self.diffBrush:
+                return self.index(row, i)
+        return None
+
+    def nextDiffFrom(self, curri):
+        row = curri.row()
+        col = curri.column()
+        resi = self.findDiffInRow(False, row, col+1)
+        if resi is not None: return resi
+        for r in range(row + 1, self.rowCount()):
+            resi = self.findDiffInRow(False, r, 0)
+            if resi is not None: return resi
+        for r in range(0, row + 1):
+            resi = self.findDiffInRow(False, r, 0)
+            if resi is not None: return resi
+        return None
+
+    def lastDiffFrom(self, curri):
+        row = curri.row()
+        col = curri.column()
+        resi = self.findDiffInRow(True, row, col-1)
+        if resi is not None: return resi
+        for r in range(row-1, -1, -1):
+            resi = self.findDiffInRow(True, r, self.columnCount()-1)
+            if resi is not None: return resi
+        for r in range(self.rowCount()-1, row-1, -1):
+            resi = self.findDiffInRow(True, r, self.columnCount()-1)
+            if resi is not None: return resi
+        return None

@@ -1,0 +1,26 @@
+#!/usr/bin/python3
+
+import sys, argparse
+from PyQt5 import QtWidgets
+
+try:
+    from diffted import main
+except ImportError:
+    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'lib')))
+    from diffted import main
+
+parser = argparse.ArgumentParser()
+parser.add_argument("infile",nargs="?")
+parser.add_argument("-g","--gitmod",help="git modifier to diff with")
+args, extras = parser.parse_known_args()
+
+app = QtWidgets.QApplication(sys.argv[:1] + extras)
+mainWin = main.Main()
+if args.infile is not None:
+    mainWin.openfilename(args.infile)
+if args.gitmod is not None:
+    mainWin.toolbars['Git'].version.setText(args.gitmod)
+    mainWin.toolbars['Git'].diffAction.trigger()
+mainWin.show()
+sys.exit(app.exec_())
+    

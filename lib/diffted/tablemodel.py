@@ -7,6 +7,29 @@ class DiffRow(list):
     def __hash__(self):
         return hash(u"\uFDD0".join(self))
 
+class DitDelegate(QtWidgets.QStyledItemDelegate):
+    def paint(self, painter, option, index):
+        proxy = index.model()
+        item = proxy.sourceModel().itemFromIndex(proxy.mapToSource(index))
+        label = QtWidgets.QLabel(item.text())
+        for k in ('diffClass', 'userClass'):
+            v = item.property(k)
+            label.setProperty(k, v)
+        style = QtWidgets.QApplication.style()
+        style.drawControl(QtWidgets.QStyle.CE_PushButtonLabel, option, painter, label)
+        # QtWidgets.QStyledItemDelegate.paint(self, painter, option, index)
+
+class DitItem(QtGui.QStandardItem, QtCore.QObject):
+    def __init__(self, *v):
+        super(QtGui.QStandardItem, self).__init__(*v)
+        self.properties = {}
+
+    def setProperty(self, key, value):
+        self.properties[key] = value
+
+    def property(self, key):
+        return self.properties.get(key, None)
+
 class DitTableModel(QtGui.QStandardItemModel):
     diffBrush = QtGui.QBrush(QtGui.QColor("red"))
     insertBrush = QtGui.QBrush(QtGui.QColor("cyan"))
@@ -30,7 +53,7 @@ class DitTableModel(QtGui.QStandardItemModel):
             self.fieldnames = rdr.fieldnames[:]
             self.setHorizontalHeaderLabels(self.fieldnames)
             for r in rdr:
-                items = [QtGui.QStandardItem(r[x]) for x in rdr.fieldnames]
+                items = [DitItem(r[x]) for x in rdr.fieldnames]
                 self.appendRow(items)
         self.endResetModel()
 
@@ -74,33 +97,39 @@ class DitTableModel(QtGui.QStandardItemModel):
                         if c is None:
                             continue
                         item = self.itemFromIndex(self.index(bstart+i, j))
-                        if c == 'replace':
-                            item.setForeground(self.diffBrush)
-                        elif c == 'insert':
-                            item.setBackground(self.insertBrush)
-                        elif c == 'delete':
-                            item.setBackground(self.deleteBrush)
-                            item.setEditable(False)
+                        if c in ('replace', 'insert', 'delete'):
+                            item.setProperty('diffClass', c)
+#                        if c == 'replace':
+#                            item.setForeground(self.diffBrush)
+#                        elif c == 'insert':
+#                            item.setBackground(self.insertBrush)
+#                        elif c == 'delete':
+#                            item.setBackground(self.deleteBrush)
+#                            item.setEditable(False)
                 for i in range(blen - alen):
                     for j in range(self.columnCount()):
-                        self.itemFromIndex(self.index(bstart+i+alen, j)).setBackground(self.insertBrush)
+                        self.itemFromIndex(self.index(bstart+i+alen, j)).setProperty('diffClass', 'insert')
+#                        self.itemFromIndex(self.index(bstart+i+alen, j)).setBackground(self.insertBrush)
                 for i in range(alen - blen):
-                    row = [QtGui.QStandardItem(x) for x in diffdata[astart+blen+i]]
+                    row = [DitItem(x) for x in diffdata[astart+blen+i]]
                     self.insertRow(bstart+blen+i, row)
                     for r in row:
-                        r.setBackground(self.deleteBrush)
+#                        r.setBackground(self.deleteBrush)
+                        r.setProperty('diffClass', 'delete')
                         r.setEditable(False)
                     inserted += 1
             elif t == 'insert':
                 for i in range(blen):
                     for j in range(self.columnCount()):
-                        self.itemFromIndex(self.index(bstart+i, j)).setBackground(self.insertBrush)
+                        self.itemFromIndex(self.index(bstart+i, j)).setProperty('diffClass', 'insert')
+#                        self.itemFromIndex(self.index(bstart+i, j)).setBackground(self.insertBrush)
             elif t == 'delete':
                 for i in range(alen):
-                    row = [QtGui.QStandardItem(x) for x in diffdata[astart+i]]
+                    row = [DitItem(x) for x in diffdata[astart+i]]
                     self.insertRow(bstart+i, row)
                     for r in row:
-                        r.setBackground(self.deleteBrush)
+                        r.setProperty('diffClass', 'delete')
+#                        r.setBackground(self.deleteBrush)
                         r.setEditable(False)
                 inserted += alen
         self.hasDiff = True
@@ -108,15 +137,17 @@ class DitTableModel(QtGui.QStandardItemModel):
     def dumpDiff(self):
         for i in range(self.rowCount()-1, -1, -1):
             first = self.item(i, 0)
-            if first.background() == self.deleteBrush:
+            if first.property('diffClass') == 'delete':
+#            if first.background() == self.deleteBrush:
                 self.removeRow(i)
                 continue
             for j in range(self.columnCount()):
                 c = self.item(i, j)
-                if c.background() == self.insertBrush:
-                    c.setBackground(self.whiteBrush)
-                elif c.foreground() == self.diffBrush:
-                    c.setForeground(self.blackBrush)
+                c.setProperty('diffClass', None)
+#                if c.background() == self.insertBrush:
+#                    c.setBackground(self.whiteBrush)
+#                elif c.foreground() == self.diffBrush:
+#                    c.setForeground(self.blackBrush)
         self.hasDiff = False
 
     def findDiffInRow(self, backwards, row, startCol):
@@ -128,8 +159,9 @@ class DitTableModel(QtGui.QStandardItemModel):
             counter = 1
         for i in range(startCol, end, counter):
             item = self.item(row, i)
-            b = item.background()
-            if b == self.insertBrush or b == self.deleteBrush or item.foreground() == self.diffBrush:
+            if item.property('diffClass') is not None:
+#            b = item.background()
+#            if b == self.insertBrush or b == self.deleteBrush or item.foreground() == self.diffBrush:
                 return self.index(row, i)
         return None
 

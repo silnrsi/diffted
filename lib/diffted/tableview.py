@@ -2,6 +2,7 @@
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 from diffted.filter import FilterEdit
+from diffted.tablemodel import DitDelegate
 
 class DitHeaderView(QtWidgets.QHeaderView):
     def __init__(self, parent):
@@ -58,7 +59,18 @@ class DitHeaderView(QtWidgets.QHeaderView):
 class DitTableView(QtWidgets.QTableView):
     def __init__(self, parent=None):
         super(DitTableView, self).__init__(parent)
+        self.stylesheet = """
+*[diffClass=insert] {
+    background-color: cyan;
+}
+*[diffClass=delete] {
+    background-color: gray;
+}
+*[diffClass=replace] {
+    color: red;
+}"""
         self.rowContextMenu = QtWidgets.QMenu()
+        self.setItemDelegate(DitDelegate(self))
         addrowsabove = self.rowContextMenu.addAction("Add rows above")
         addrowsabove.triggered.connect(self.addRowsAbove)
         addrowsbelow = self.rowContextMenu.addAction("Add rows below")

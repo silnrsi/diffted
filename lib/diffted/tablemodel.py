@@ -7,17 +7,32 @@ class DiffRow(list):
     def __hash__(self):
         return hash(u"\uFDD0".join(self))
 
+class Cell(QtWidgets.QWidget):
+    _propDefaults = {
+        'diffClass': None,
+        'userClass': None
+    }
+
+    def initFromItem(self, item):
+        for k, v in self._propDefaults.items():
+            other = item.property(k)
+            self.setProperty(k, other or v)
+
 class DitDelegate(QtWidgets.QStyledItemDelegate):
+    def __init__(self, *a):
+        super(DitDelegate, self).__init__(*a)
+        self.label = Cell(self.parent())
+        self.debugFlag = False
+
     def paint(self, painter, option, index):
         proxy = index.model()
         item = proxy.sourceModel().itemFromIndex(proxy.mapToSource(index))
-        label = QtWidgets.QLabel(item.text())
-        for k in ('diffClass', 'userClass'):
-            v = item.property(k)
-            label.setProperty(k, v)
-        style = QtWidgets.QApplication.style()
-        style.drawControl(QtWidgets.QStyle.CE_PushButtonLabel, option, painter, label)
-        # QtWidgets.QStyledItemDelegate.paint(self, painter, option, index)
+        self.label.initFromItem(item)
+        self.initStyleOption(option, index)
+        style = option.widget.style() if option.widget else QtWidgets.QApplication.style()
+        style.unpolish(self.label)
+        style.polish(self.label)
+        style.drawControl(QtWidgets.QStyle.CE_ItemViewItem, option, painter, self.label)
 
 class DitItem(QtGui.QStandardItem, QtCore.QObject):
     def __init__(self, *v):
@@ -41,7 +56,7 @@ class DitTableModel(QtGui.QStandardItemModel):
         super(DitTableModel, self).__init__(parent)
         self.hasDiff = False
 
-    def loadFromCsv(self, fname):
+    def loadFromCsv(self, fname, config):
         self.beginResetModel()
         self.clear()
         self.fname = fname

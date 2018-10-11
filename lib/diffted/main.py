@@ -6,10 +6,14 @@ from diffted.tableview import DitTableView
 from diffted.filter import FilterProxy
 from diffted import gitsupport
 from collections import namedtuple
+import yaml
 
 class Main(QtWidgets.QMainWindow):
-    def __init__(self):
+    def __init__(self, app):
         super(Main, self).__init__()
+        self.app = app
+        self.config = {}
+        self.config_file = None
         self.resize(500, 500)
         self.actions = {}
         self.model = DitTableModel()
@@ -70,23 +74,34 @@ class Main(QtWidgets.QMainWindow):
         self.addToolBar(self.toolbars['Git'])
 
     def openfile(self, fname=None):
-        fname, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Open CSV File", ".", "CSV files (*.csv *.tsv)")
+        fname, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Open CSV File", ".",
+                        "CSV files (*.csv *.tsv);;YAML files (*.yaml)")
         if fname != "":
             self.openfilename(fname)
 
     def openfilename(self, fname):
-        self.fname = fname
-        self.model.loadFromCsv(self.fname)
-        self.toolbars['Git'].changeFileName(self.fname, self.model)
+        if fname.lower().endswith(".yaml"):
+            self.loadconfig(fname)
+        else:
+            self.config['data'] = fname
+        fname = self.config['data']
+        self.model.loadFromCsv(fname, self.config)
+        self.toolbars['Git'].changeFileName(fname, self.model)
+
+    def loadconfig(self, fname):
+        self.config_file = fname
+        self.config = yaml.load(fname)
+        self.openfilename(self.config['data'])
 
     def savefile(self):
-        if self.fname is not None and self.fname != "":
-            self.model.saveCsv(self.fname)
+        if self.config['data'] is not None and self.config['data'] != "":
+            self.model.saveCsv(self.config['data'])
 
     def saveasfile(self):
-        fname, _ = QtWidgets.QFileDialog.getSaveFileName(self, "Save CSV File", self.fname, "CSV files (*.csv *.tsv)")
+        fname, _ = QtWidgets.QFileDialog.getSaveFileName(self, "Save CSV File", self.config['data'], 
+                        "CSV files (*.csv *.tsv);;YAML files (*.yaml)")
         if fname != "":
-            self.fname = fname
+            self.config['data'] = fname
             self.savefile()
 
     def openDiffFile(self):

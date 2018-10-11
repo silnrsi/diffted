@@ -59,16 +59,6 @@ class DitHeaderView(QtWidgets.QHeaderView):
 class DitTableView(QtWidgets.QTableView):
     def __init__(self, parent=None):
         super(DitTableView, self).__init__(parent)
-        self.stylesheet = """
-*[diffClass=insert] {
-    background-color: cyan;
-}
-*[diffClass=delete] {
-    background-color: gray;
-}
-*[diffClass=replace] {
-    color: red;
-}"""
         self.rowContextMenu = QtWidgets.QMenu()
         self.setItemDelegate(DitDelegate(self))
         addrowsabove = self.rowContextMenu.addAction("Add rows above")
@@ -94,6 +84,9 @@ class DitTableView(QtWidgets.QTableView):
         namecol.triggered.connect(self.renameColumn)
         hdr.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         hdr.customContextMenuRequested.connect(self.column_rightclick)
+
+        #self.setStyleSheet("""
+#QLabel { color: green }""")
 
     def resetModel(self):
         #self.setSortingEnabled(True)

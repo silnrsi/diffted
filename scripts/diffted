@@ -2,6 +2,7 @@
 
 import sys, argparse
 from PyQt5 import QtWidgets
+import os
 
 try:
     from diffted import main
@@ -11,11 +12,17 @@ except ImportError:
 
 parser = argparse.ArgumentParser()
 parser.add_argument("infile",nargs="?")
+parser.add_argument("-s","--stylesheet",help="css stylesheet")
 parser.add_argument("-g","--gitmod",help="git modifier to diff with")
 args, extras = parser.parse_known_args()
 
+if args.stylesheet is None:
+    args.stylesheet = os.path.abspath(os.path.join(os.path.dirname(main.__file__), 'diffted.qss'))
 app = QtWidgets.QApplication(sys.argv[:1] + extras)
-mainWin = main.Main()
+with open(args.stylesheet) as fh:
+    app.setStyleSheet("".join(fh.readlines()))
+mainWin = main.Main(app)
+#import pdb; pdb.set_trace()
 if args.infile is not None:
     mainWin.openfilename(args.infile)
 if args.gitmod is not None:
@@ -23,4 +30,3 @@ if args.gitmod is not None:
     mainWin.toolbars['Git'].diffAction.trigger()
 mainWin.show()
 sys.exit(app.exec_())
-    

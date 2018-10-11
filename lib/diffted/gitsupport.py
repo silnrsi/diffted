@@ -1,6 +1,6 @@
 
 from PyQt5 import QtWidgets, QtGui
-from subprocess import call, check_output
+from subprocess import call, check_output, CalledProcessError
 from io import StringIO
 import os
 
@@ -10,8 +10,13 @@ def reldir(fname):
 
 def gitTestFile(fname):
     path = reldir(fname)
-    res = call("git -C {} ls-files --error-unmatch {}".format(path, os.path.basename(fname)), shell=True)
-    return not res
+    try:
+        res = check_output("git -C {} ls-files --error-unmatch {}".format(path, os.path.basename(fname)), shell=True)
+    except CalledProcessError:
+        res = False
+    else:
+        res = True
+    return res
 
 class GitSupport():
     def __init__(self, fname):

@@ -83,25 +83,29 @@ class Main(QtWidgets.QMainWindow):
         if fname.lower().endswith(".yaml"):
             self.loadconfig(fname)
         else:
-            self.config['data'] = fname
-        fname = self.config['data']
+            self.config['datafile'] = fname
+        fname = self.config['datafile']
         self.model.loadFromCsv(fname, self.config)
         self.toolbars['Git'].changeFileName(fname, self.model)
 
     def loadconfig(self, fname):
         self.config_file = fname
-        self.config = yaml.load(fname)
-        self.openfilename(self.config['data'])
+        with open(fname) as f:
+            self.config = yaml.load(f)
+        if 'css' in self.config:
+            self.app.setStyleSheet(self.app.styleSheet() + self.config['css'])      # bad code for reloading
+        self.model.loadConfig(self.config)
 
     def savefile(self):
-        if self.config['data'] is not None and self.config['data'] != "":
-            self.model.saveCsv(self.config['data'])
+        fname = self.config['datafile']
+        if fname is not None and fname != "":
+            self.model.saveCsv(fname)
 
     def saveasfile(self):
         fname, _ = QtWidgets.QFileDialog.getSaveFileName(self, "Save CSV File", self.config['data'], 
                         "CSV files (*.csv *.tsv);;YAML files (*.yaml)")
         if fname != "":
-            self.config['data'] = fname
+            self.config['datafile'] = fname
             self.savefile()
 
     def openDiffFile(self):

@@ -16,10 +16,10 @@ class Main(QtWidgets.QMainWindow):
         self.config_file = None
         self.resize(500, 500)
         self.actions = {}
-        self.model = DitTableModel()
+        self.tableView = DitTableView()
+        self.model = DitTableModel(self.tableView)
         self.proxy = FilterProxy()
         self.proxy.setSourceModel(self.model)
-        self.tableView = DitTableView()
         self.tableView.setModel(self.proxy)
         self.model.modelReset.connect(self.tableView.resetModel)
         self.setCentralWidget(self.tableView)
@@ -86,7 +86,7 @@ class Main(QtWidgets.QMainWindow):
             self.config['datafile'] = fname
         fname = self.config['datafile']
         self.model.loadFromCsv(fname, self.config)
-        self.toolbars['Git'].changeFileName(fname, self.model)
+        self.toolbars['Git'].changeFileName(fname, self.model, self.tableView)
 
     def loadconfig(self, fname):
         self.config_file = fname
@@ -113,6 +113,7 @@ class Main(QtWidgets.QMainWindow):
         if diffname != "":
             with open(diffname) as f:
                 self.model.loadDiffCsv(f)
+            self.tableView.update()
 
     def sort_changed(self):
         v = self.actions['View/Sorted'].isChecked()

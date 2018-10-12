@@ -14,8 +14,13 @@ parser = argparse.ArgumentParser()
 parser.add_argument("infile",nargs="?")
 parser.add_argument("-s","--stylesheet",help="css stylesheet")
 parser.add_argument("-g","--gitmod",help="git modifier to diff with")
+parser.add_argument("-p","--profile",action="store_true",help="Profile startup")
 args, extras = parser.parse_known_args()
 
+if args.profile:
+    import cProfile, pstats, io
+    pr = cProfile.Profile()
+    pr.enable() 
 if args.stylesheet is None:
     args.stylesheet = os.path.abspath(os.path.join(os.path.dirname(main.__file__), 'diffted.qss'))
 app = QtWidgets.QApplication(sys.argv[:1] + extras)
@@ -28,5 +33,17 @@ if args.infile is not None:
 if args.gitmod is not None:
     mainWin.toolbars['Git'].version.setText(args.gitmod)
     mainWin.toolbars['Git'].diffAction.trigger()
+if args.profile:
+    pr.disable()
+
 mainWin.show()
-sys.exit(app.exec_())
+res = app.exec_()
+
+if args.profile:
+    s = io.StringIO()
+    ps = pstats.Stats(pr, stream=s).sort_stats()
+    ps.print_stats()
+    print(s.getvalue())
+
+sys.exit(res)
+    

@@ -64,12 +64,13 @@ class GitToolBar(QtWidgets.QToolBar):
         self.addAction(self.upAction)
         self.hide()
 
-    def changeFileName(self, fname, model):
+    def changeFileName(self, fname, model, view):
         if not gitTestFile(fname):
             self.hide()
             self.model = None
             return
         self.model = model
+        self.view = view
         self.gs = GitSupport(fname)
         self.branch.clear()
         self.branch.addItems(self.gs.branches)
@@ -80,6 +81,7 @@ class GitToolBar(QtWidgets.QToolBar):
     def diffActionChanged(self):
         if self.model is None:
             self.diffAction.setChecked(False)
+            return
         v = self.diffAction.isChecked()
         if v:
             s = self.gs.getfileat(self.branch.currentText(), self.version.text())
@@ -89,4 +91,4 @@ class GitToolBar(QtWidgets.QToolBar):
                 fh.close()
         else:
             self.model.dumpDiff()
-
+        self.view.update()

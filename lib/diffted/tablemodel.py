@@ -3,7 +3,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 import csv, os, re, ast
 from difflib import SequenceMatcher
 
-class EvalPalette(object):
+class EvalStyle(object):
     def __init__(self, rule=None):
         self.font = None
         self.backgroundColor = None
@@ -44,7 +44,7 @@ class EvalPalette(object):
             self.foregroundColor = p.foregroundColor
 
     def copy(self):
-        res = EvalPalette()
+        res = EvalStyle()
         res.font = self.font
         res.backgrounColor = self.backgroundColor
         res.foregroundColor = self.foregroundColor
@@ -86,40 +86,48 @@ class DiffRow(list):
         return hash(u"\uFDD0".join(self))
 
 class DitItem(QtGui.QStandardItem, QtCore.QObject):
+
     def __init__(self, *v):
         super(QtGui.QStandardItem, self).__init__(*v)
-        self.diffPalette = None 
-        self.evalPalette = None
+        self.diffStyle = None 
+        self._updateTypes = {'foregroundColor': (self.setForeground, QtGui.QBrush(QtCore.Qt.NoBrush)),
+                             'backgroundColor': (self.setBackground, QtGui.QBrush(QtCore.Qt.NoBrush)),
+                             'font': (self.setFont, QtGui.QFont())}
+        self.evalStyle = None
         self.diffMode = None
 
     def setDiffMode(self, mode, styles):
-        self.diffPalette = styles.get(mode, None)
+        self.diffStyle = styles.get(mode, None)
         if mode != self.diffMode:
             self.update()
         self.diffMode = mode
 
-    def mergeEvalPalette(self, p):
-        if self.evalPalette is None:
-            self.evalPalette = EvalPalette()
-        self.evalPalette.mergePalette(p)
+    def mergeEvalStyle(self, p):
+        if self.evalStyle is None:
+            self.evalStyle = EvalStyle()
+        self.evalStyle.mergeStyle(p)
         
-    def update(self):
-        if self.evalPalette is None and self.diffPalette is None:
-            return
-        if self.evalPalette is None:
-            p = self.diffPalette
-        elif self.diffPalette is None:
-            p = self.evalPalette
+    def update(self, changed=True):
+        if self.evalStyle is None and self.diffStyle is None:
+            if not changed:
+                return
+            p = None
+        if self.evalStyle is None:
+            p = self.diffStyle
+        elif self.diffStyle is None:
+            p = self.evalStyle
         else:
-            p = self.evalPalette.copy()
-            p.merge(self.diffPalette)
+            p = self.evalStyle.copy()
+            p.merge(self.diffStyle)
             
-        for ck, cf in {'foregroundColor': self.setForeground,
-                       'backgroundColor': self.setBackground,
-                       'font': self.setFont}.items():
+        for ck, cf in self._updateTypes.items():
             v = getattr(p, ck, None)
-            if v is not None:
-                cf(v)
+            if v is None:
+                if not changed:
+                    continue
+                cf[0](cf[1])
+            else:
+                cf[0](v)
 
 
 class DitTableModel(QtGui.QStandardItemModel):
@@ -133,7 +141,7 @@ class DitTableModel(QtGui.QStandardItemModel):
         for k, d in {'replace': {'backgroundColor': "#FFC0C0"},
                      'insert': {'backgroundColor': "#C0C0FF"},
                      'delete': {'backgroundColor': "#E0E0E0"}}.items():
-            self.styles[k] = EvalPalette(config.get(k+"Style", d))
+            self.styles[k] = EvalStyle(config.get(k+"Style", d))
         for k in ('rowrules', 'rules'):
             if k not in config:
                 continue
@@ -141,7 +149,7 @@ class DitTableModel(QtGui.QStandardItemModel):
                 e = r.get('eval', None)
                 if e is not None and not evaluator.is_safe(e):
                     continue
-                self.rules.setdefault(r.get('col', None), []).append({'style': EvalPalette(r),
+                self.rules.setdefault(r.get('col', None), []).append({'style': EvalStyle(r),
                                                        'eval': r.get('eval', None)})
 
     def loadFromCsv(self, fname, config):
@@ -222,7 +230,7 @@ class DitTableModel(QtGui.QStandardItemModel):
                     row = [DitItem(x) for x in diffdata[astart+i]]
                     self.insertRow(bstart+i, row)
                     for r in row:
-                        r.setDiffMOde('delete', self.styles)
+                        r.setDiffMode('delete', self.styles)
                         r.setEditable(False)
                 inserted += alen
         self.hasDiff = True
@@ -241,7 +249,7 @@ class DitTableModel(QtGui.QStandardItemModel):
                 nextRow = {self.fieldnames[j]: self.item(i-1,j).text() for j in range(self.columnCount())}
             else:
                 nextRow = None
-            rowStyle = EvalPalette()
+            rowStyle = EvalStyle()
             for rule in self.rules[None]:
                 if evaluator.eval(rule['eval'], r=rowData, lastRow=nextRow, nextRow=lastRow):
                     rowStyle.merge(rule['style'])
@@ -251,8 +259,9 @@ class DitTableModel(QtGui.QStandardItemModel):
                     if evaluator.eval(rule['eval'], r=rowData, lastRow=nextRow, nextRow=lastRow):
                         cellStyle.merge(rule['style'])
                 if not cellStyle.isEmpty():
-                    self.item(i,j).evalPalette = cellStyle
-                    self.item(i,j).update()
+                    item = self.item(i,j)
+                    item.evalStyle = cellStyle
+                    item.update(changed=False)
 
     def dumpDiff(self):
         for i in range(self.rowCount()-1, -1, -1):
@@ -262,7 +271,7 @@ class DitTableModel(QtGui.QStandardItemModel):
                 continue
             for j in range(self.columnCount()):
                 c = self.item(i, j)
-                c.setDiffModel(None)
+                c.setDiffMode(None, self.styles)
         self.hasDiff = False
 
     def findDiffInRow(self, backwards, row, startCol):

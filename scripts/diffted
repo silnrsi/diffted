@@ -21,8 +21,6 @@ if args.profile:
     import cProfile, pstats, io
     pr = cProfile.Profile()
     pr.enable() 
-if args.stylesheet is None:
-    args.stylesheet = os.path.abspath(os.path.join(os.path.dirname(main.__file__), 'diffted.qss'))
 app = QtWidgets.QApplication(sys.argv[:1] + extras)
 with open(args.stylesheet) as fh:
     app.setStyleSheet("".join(fh.readlines()))

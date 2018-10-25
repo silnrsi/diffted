@@ -22,8 +22,9 @@ if args.profile:
     pr = cProfile.Profile()
     pr.enable() 
 app = QtWidgets.QApplication(sys.argv[:1] + extras)
-with open(args.stylesheet) as fh:
-    app.setStyleSheet("".join(fh.readlines()))
+if args.stylesheet:
+    with open(args.stylesheet) as fh:
+        app.setStyleSheet("".join(fh.readlines()))
 mainWin = main.Main(app)
 #import pdb; pdb.set_trace()
 if args.infile is not None:

@@ -1,6 +1,6 @@
 
 from PyQt5 import QtWidgets, QtGui
-from subprocess import call, check_output, CalledProcessError
+from subprocess import call, check_output, CalledProcessError, DEVNULL
 from io import StringIO
 import os
 
@@ -11,7 +11,8 @@ def reldir(fname):
 def gitTestFile(fname):
     path = reldir(fname)
     try:
-        res = check_output("git -C {} ls-files --error-unmatch {}".format(path, os.path.basename(fname)), shell=True)
+        res = check_output("git -C {} ls-files --error-unmatch {}".format(path, os.path.basename(fname)),
+                           stderr=DEVNULL, shell=True)
     except CalledProcessError:
         res = False
     else:

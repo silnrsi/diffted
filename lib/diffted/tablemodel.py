@@ -142,41 +142,40 @@ class DitTableModel(QtGui.QStandardItemModel):
                      'insert': {'backgroundColor': "#C0C0FF"},
                      'delete': {'backgroundColor': "#E0E0E0"}}.items():
             self.styles[k] = EvalStyle(config.get(k+"Style", d))
-        for k in ('rowrules', 'rules'):
-            if k not in config:
+        if 'rules' not in config:
+            return
+        for r in config['rules']:
+            e = r.get('eval', None)
+            if e is not None and not evaluator.is_safe(e):
                 continue
-            for r in config[k]:
-                e = r.get('eval', None)
-                if e is not None and not evaluator.is_safe(e):
-                    continue
-                self.rules.setdefault(r.get('col', None), []).append({'style': EvalStyle(r),
-                                                       'eval': r.get('eval', None)})
+            self.rules.setdefault(r.get('col', None), []).append({'style': EvalStyle(r),
+                                                                  'eval': r.get('eval', None)})
 
-    def loadFromCsv(self, fname, config):
+    def loadFromCsv(self, f, config):
         self.beginResetModel()
         self.clear()
-        self.fname = fname
-        with open(fname) as f:
-#            self.dialect = csv.Sniffer().sniff(f.read(1024))
-#            f.seek(0)
-#            rdr = csv.DictReader(f, dialect=self.dialect)
-            rdr = csv.DictReader(f)
-            self.fieldnames = rdr.fieldnames[:]
-            self.setHorizontalHeaderLabels(self.fieldnames)
-            for r in rdr:
-                items = [DitItem(r[x]) for x in rdr.fieldnames]
-                self.appendRow(items)
+        self.fname = f.path
+#       self.dialect = csv.Sniffer().sniff(f.read(1024))
+#       f.seek(0)
+#       rdr = csv.DictReader(f, dialect=self.dialect)
+        rdr = csv.DictReader(f)
+        self.fieldnames = rdr.fieldnames[:]
+        self.setHorizontalHeaderLabels(self.fieldnames)
+        for r in rdr:
+            items = [DitItem(r[x]) for x in rdr.fieldnames]
+            self.appendRow(items)
         self.endResetModel()
         if len(self.rules):
             self.runRules()
 
-    def saveCsv(self, fname):
-        with open(fname, "w") as f:
-            writer = csv.DictWriter(f, fieldnames=self.fieldnames, # dialect=self.dialect,
-                        lineterminator = os.linesep, quoting=csv.QUOTE_MINIMAL, quotechar = '"', escapechar = '\\')
-            writer.writeheader()
-            for i in range(self.rowCount()):
-                writer.writerow({self.fieldnames[j]: self.data(self.index(i, j)) for j in range(self.columnCount())})
+    def saveCsv(self, f):
+        writer = csv.DictWriter(f, fieldnames=self.fieldnames, # dialect=self.dialect,
+                    lineterminator = os.linesep, quoting=csv.QUOTE_MINIMAL,
+                    quotechar = '"', escapechar = '\\')
+        writer.writeheader()
+        for i in range(self.rowCount()):
+            writer.writerow({self.fieldnames[j]: self.data(self.index(i, j))
+                             for j in range(self.columnCount())})
 
     def colDiff_(self, orig, new):
         res = [None] * len(new)

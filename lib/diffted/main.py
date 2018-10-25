@@ -4,7 +4,7 @@ from PyQt5 import QtWidgets, QtGui, QtCore
 from diffted.tablemodel import DitTableModel
 from diffted.tableview import DitTableView
 from diffted.filter import FilterProxy
-from diffted import gitsupport
+from diffted import gitsupport, urls
 from collections import namedtuple
 import yaml
 
@@ -85,12 +85,13 @@ class Main(QtWidgets.QMainWindow):
         else:
             self.config['datafile'] = fname
         fname = self.config['datafile']
-        self.model.loadFromCsv(fname, self.config)
+        with urls.openFile(fname, 'r', config=self.config) as fh:
+            self.model.loadFromCsv(fh, self.config)
         self.toolbars['Git'].changeFileName(fname, self.model, self.tableView)
 
     def loadconfig(self, fname):
         self.config_file = fname
-        with open(fname) as f:
+        with open(fname, encoding="utf-8") as f:
             self.config = yaml.load(f)
         if 'css' in self.config:
             self.app.setStyleSheet(self.app.styleSheet() + self.config['css'])      # bad code for reloading
@@ -98,11 +99,13 @@ class Main(QtWidgets.QMainWindow):
 
     def savefile(self):
         fname = self.config['datafile']
-        if fname is not None and fname != "":
-            self.model.saveCsv(fname)
+        if fname is None or fname == "":
+            return
+        with urls.openFile(fname, 'w', config=self.config, encoding="utf-8") as fh:
+            self.model.saveCsv(fh)
 
     def saveasfile(self):
-        fname, _ = QtWidgets.QFileDialog.getSaveFileName(self, "Save CSV File", self.config['data'], 
+        fname, _ = QtWidgets.QFileDialog.getSaveFileName(self, "Save CSV File", self.config['datafile'], 
                         "CSV files (*.csv *.tsv);;YAML files (*.yaml)")
         if fname != "":
             self.config['datafile'] = fname
@@ -111,7 +114,7 @@ class Main(QtWidgets.QMainWindow):
     def openDiffFile(self):
         diffname, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Open CSV File", ".", "CSV files (*.csv *.tsv)")
         if diffname != "":
-            with open(diffname) as f:
+            with open(diffname, encoding="utf-8") as f:
                 self.model.loadDiffCsv(f)
             self.tableView.update()
 

@@ -59,10 +59,10 @@ class DitTableView(QtWidgets.QTableView):
     def __init__(self, parent=None):
         super(DitTableView, self).__init__(parent)
         self.rowContextMenu = QtWidgets.QMenu()
-        addrowsabove = self.rowContextMenu.addAction("Add rows above")
-        addrowsabove.triggered.connect(self.addRowsAbove)
-        addrowsbelow = self.rowContextMenu.addAction("Add rows below")
-        addrowsbelow.triggered.connect(self.addRowsBelow)
+        self.addrowsabove = self.rowContextMenu.addAction("Add rows above")
+        self.addrowsabove.triggered.connect(self.addRowsAbove)
+        self.addrowsbelow = self.rowContextMenu.addAction("Add rows below")
+        self.addrowsbelow.triggered.connect(self.addRowsBelow)
         delrows = self.rowContextMenu.addAction("Remove rows")
         delrows.triggered.connect(self.delRows)
         rowhdr = self.verticalHeader()
@@ -83,9 +83,6 @@ class DitTableView(QtWidgets.QTableView):
         hdr.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         hdr.customContextMenuRequested.connect(self.column_rightclick)
 
-        #self.setStyleSheet("""
-#QLabel { color: green }""")
-
     def resetModel(self):
         #self.setSortingEnabled(True)
         m = self.model()
@@ -94,6 +91,11 @@ class DitTableView(QtWidgets.QTableView):
         hdr = self.horizontalHeader()
         m.setFilters(hdr.setFilters(m.columnCount()))
         hdr.setSortIndicator(0, 0)
+
+    def setSortingEnabled(self, v):
+        super(DitTableView, self).setSortingEnabled(v)
+        self.addrowsabove.setEnabled(not v)
+        self.addrowsbelow.setEnabled(not v)
 
     def row_rightclick(self, loc):
         vh = self.verticalHeader()

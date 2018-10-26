@@ -160,3 +160,45 @@ class DitTableView(QtWidgets.QTableView):
         hdr.setCurrentIndex(index)
         hdr.edit(index)
         hdr.item(index).setEditable(False)
+
+    def gotoMatch(self, row, col, filt):
+        pi = self.model().index(row, col)
+        val = self.model().data(pi)
+        if filt.match(val):
+            self.setCurrentIndex(pi)
+            self.setFocus()
+            self.scrollTo(pi)
+            return True
+        else:
+            return False
+
+    def findNextInColumn(self, col, filt):
+        pos = self.currentIndex()
+        start = pos.row() + 1
+        curr = start
+        curm = self.model().rowCount()
+        while curr < curm:
+            if self.gotoMatch(curr, col, filt):
+                return
+            curr += 1
+        curr = 0
+        while curr < start:
+            if self.gotoMatch(curr, col, filt):
+                return 
+            curr += 1
+
+    def findPrevInColumn(self, col, filt):
+        pos = self.currentIndex()
+        start = pos.row() - 1
+        curr = start
+        curm = self.model().rowCount()
+        while curr >= 0:
+            if self.gotoMatch(curr, col, filt):
+                return
+            curr -= 1
+        curr = curm - 1
+        while curr > start:
+            if self.gotoMatch(curr, col, filt):
+                return 
+            curr -= 1
+

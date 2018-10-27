@@ -44,7 +44,7 @@ class DitHeaderView(QtWidgets.QHeaderView):
         for index, editor in enumerate(self.filters):
             height = editor.sizeHint().height()
             editor.move(
-                self.sectionPosition(index) + self.pos().x() + 2,
+                self.sectionPosition(index) + self.pos().x(),
                 super(DitHeaderView, self).sizeHint().height() + (self._padding // 2))
             editor.resize(self.sectionSize(index), height)
 

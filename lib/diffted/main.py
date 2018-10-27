@@ -6,7 +6,7 @@ from diffted.tableview import DitTableView
 from diffted.filter import FilterProxy
 from diffted import gitsupport, urls
 from collections import namedtuple
-import yaml
+import yaml, os
 
 class Main(QtWidgets.QMainWindow):
     def __init__(self, app):
@@ -83,8 +83,11 @@ class Main(QtWidgets.QMainWindow):
         if fname.lower().endswith(".yaml"):
             self.loadconfig(fname)
         else:
+            self.config_file = None
             self.config['datafile'] = fname
         fname = self.config['datafile']
+        if self.config_file is not None:
+            fname = os.path.join(os.path.dirname(self.config_file), fname)
         with urls.openFile(fname, 'r', config=self.config) as fh:
             self.model.loadFromCsv(fh, self.config)
         self.toolbars['Git'].changeFileName(fname, self.model, self.tableView)

@@ -3,7 +3,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 import re
 
 class FlipFlop(QtWidgets.QWidget):
-    def __init__(self, *names, parent=None):
+    def __init__(self, *names, parent=None, tooltips=None):
         super(FlipFlop, self).__init__(parent)
         layout = QtWidgets.QVBoxLayout()
         layout.setSpacing(0)
@@ -22,8 +22,10 @@ class FlipFlop(QtWidgets.QWidget):
             else:
                 b = QtWidgets.QToolButton(self)
                 b.setArrowType(n)
-                b.setStyleSheet('max-height: 12px; min-height: 10px; max-width: 12px')
+                b.setStyleSheet('QToolButton { max-height: 12px; min-height: 10px; max-width: 12px} QToolTip { font-size: 11pt }')
             self.buttons.addButton(b, id=i)
+            if tooltips is not None and len(tooltips) > i:
+                b.setToolTip(tooltips[i])
             layout.addWidget(b)
         self.buttons.button(0).click()
         self.setLayout(layout)
@@ -31,9 +33,6 @@ class FlipFlop(QtWidgets.QWidget):
 class FilterEdit(QtWidgets.QWidget):
     def __init__(self, parent=None):
         super(FilterEdit, self).__init__(parent)
-        self.setStyleSheet("""QCheckBox { spacing: 4px }
-        QPushButton { padding: 2 2 2 2 }
-        """)
         layout = QtWidgets.QVBoxLayout()
         layout.setSpacing(1)
         layout.setContentsMargins(1, 0, 1, 0)
@@ -42,12 +41,16 @@ class FilterEdit(QtWidgets.QWidget):
         rgroup.setContentsMargins(1, 1, 1, 0)
         rgroup.setSpacing(1)
         self.checkBox = QtWidgets.QCheckBox("On")
-        self.flipflop = FlipFlop("S", "R")
-        self.dirbuttons = FlipFlop(1, 2)
+        self.checkBox.setStyleSheet("spacing: 2px")
+        self.regBox = QtWidgets.QCheckBox("Reg")
+        self.regBox.setStyleSheet("QCheckBox { font-size: 10px; height: 36px; margin-left: 2px; padding-bottom: -6px; spacing: -13px } ::indicator { subcontrol-position: top left; width: 13px; height: 13px; }")
+        self.regBox.setToolTip("Interpret filter as regular expression")
+        #self.flipflop = FlipFlop("S", "R")
+        self.dirbuttons = FlipFlop(1, 2, tooltips=["Search backwards", "Search forwards"])
         rgroup.addWidget(self.checkBox)
         rgroup.addStretch()
         rgroup.addWidget(self.dirbuttons)
-        rgroup.addWidget(self.flipflop)
+        rgroup.addWidget(self.regBox)
         layout.addWidget(self.lineEdit)
         layout.addLayout(rgroup)
         self.setLayout(layout)
@@ -56,10 +59,13 @@ class FilterEdit(QtWidgets.QWidget):
         return self.dirbuttons.buttons.button(1 if down else 0)
 
     def match(self, val):
-        if self.flipflop.buttons.checkedId() == 0:
-            return self.lineEdit.text() in val
-        else:
+        if self.isRegex():
             return re.search(self.lineEdit.text(), val)
+        else:
+            return self.lineEdit.text() in val
+
+    def isRegex(self):
+        return self.regBox.isChecked()
 
 class FilterProxy(QtCore.QSortFilterProxyModel):
     def __init__(self, parent=None):
@@ -81,7 +87,7 @@ class FilterProxy(QtCore.QSortFilterProxyModel):
         m = self.sourceModel()
         for i, f in enumerate(self.filters):
             if f.checkBox.isChecked():
-                if f.flipflop.buttons.checkedId() == 0:
+                if not f.isRegex():
                     if not f.lineEdit.text() in m.data(m.index(row, i, parent)):
                         return False
                 elif not re.search(f.lineEdit.text(), m.data(m.index(row, i, parent))):

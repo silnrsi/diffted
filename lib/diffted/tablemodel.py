@@ -136,6 +136,10 @@ class DitTableModel(QtGui.QStandardItemModel):
         self.styles = {}
         self.hasDiff = False
         self.rules = {}
+        self.itemChanged.connect(self.hasChanged)
+
+    def hasChanged(self, item):
+        self.dataChanged = True
 
     def loadConfig(self, config):
         for k, d in {'replace': {'backgroundColor': "#FFC0C0"},
@@ -165,6 +169,7 @@ class DitTableModel(QtGui.QStandardItemModel):
             items = [DitItem(r[x]) for x in rdr.fieldnames]
             self.appendRow(items)
         self.endResetModel()
+        self.dataChanged = False
         if len(self.rules):
             self.runRules()
 

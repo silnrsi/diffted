@@ -92,6 +92,27 @@ class DitTableView(QtWidgets.QTableView):
         m.setFilters(hdr.setFilters(m.columnCount()))
         hdr.setSortIndicator(0, 0)
 
+    def getSettings(self):
+        res = {}
+        res['colsizes'] = [self.columnWidth(i) for i in range(self.model().columnCount())]
+        filts = {}
+        res['filters'] = filts
+        for i, f in enumerate(self.horizontalHeader().filters):
+            colname = self.model().headerData(i, QtCore.Qt.Horizontal)
+            val = f.getSettings()
+            if val is not None:
+                filts[colname] = val
+        return res
+
+    def setFromSettings(self, settings):
+        for i, c in enumerate(settings['colsizes']):
+            self.setColumnWidth(i, c)
+        colmap = {self.model().headerData(i, QtCore.Qt.Horizontal): i for i in range(self.model().columnCount())}
+        for k, v in settings['filters'].items():
+            i = colmap[k]
+            f = self.horizontalHeader().filters[i]
+            f.setFromSettings(v)
+
     def setSortingEnabled(self, v):
         super(DitTableView, self).setSortingEnabled(v)
         self.addrowsabove.setEnabled(not v)

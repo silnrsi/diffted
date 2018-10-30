@@ -43,7 +43,7 @@ class FilterEdit(QtWidgets.QWidget):
         self.checkBox = QtWidgets.QCheckBox("On")
         self.checkBox.setStyleSheet("spacing: 2px")
         self.regBox = QtWidgets.QCheckBox("Reg")
-        self.regBox.setStyleSheet("QCheckBox { font-size: 10px; height: 36px; margin-left: 2px; padding-bottom: -6px; spacing: -13px } ::indicator { subcontrol-position: top left; width: 13px; height: 13px; }")
+        self.regBox.setStyleSheet("QCheckBox { font-size: 10px; height: 36px; margin: 0 2px 0 2px; padding-bottom: -6px; spacing: -13px } ::indicator { subcontrol-position: top left; width: 13px; height: 13px; }")
         self.regBox.setToolTip("Interpret filter as regular expression")
         #self.flipflop = FlipFlop("S", "R")
         self.dirbuttons = FlipFlop(1, 2, tooltips=["Search backwards", "Search forwards"])
@@ -66,6 +66,21 @@ class FilterEdit(QtWidgets.QWidget):
 
     def isRegex(self):
         return self.regBox.isChecked()
+
+    def getSettings(self):
+        val = self.lineEdit.text()
+        reg = self.isRegex()
+        ison = self.checkBox.isChecked()
+        if val != "":
+            return (val, reg, ison)
+        else:
+            return None
+
+    def setFromSettings(self, vals):
+        self.lineEdit.setText(vals[0])
+        self.regBox.setChecked(vals[1])
+        if self.checkBox.isChecked() != vals[2]:
+            f.checkBox.setChecked(vals[2])
 
 class FilterProxy(QtCore.QSortFilterProxyModel):
     def __init__(self, parent=None):

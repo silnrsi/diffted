@@ -11,12 +11,13 @@ def openFile(fname, *a, **kw):
 
 class OSFile(io.TextIOWrapper):
     def __init__(self, fname, mode='r', config={}, **kw):
-        super(OSFile, self).__init__(io.FileIO(fname, mode))
+        super(OSFile, self).__init__(io.FileIO(fname, mode), encoding="utf-8")
         self.path = fname
 
 
 class GithubFile(io.StringIO):
     def __init__(self, fname, mode='r', **kw):
+        fname = fname.replace("\\", "/")
         if 'encoding' in kw:
             del kw['encoding']
         for k, v in kw.items():

@@ -132,6 +132,13 @@ class DitTableView(QtWidgets.QTableView):
         self.currPos = hh.logicalIndexAt(loc)
         self.colContextMenu.exec_(QtGui.QCursor.pos())
 
+    def keyPressEvent(self, event):
+        if event.key() == QtCore.Qt.Key_Backspace or event.key() == QtCore.Qt.Key_Delete:
+            for x in self.selectedIndexes():
+                self.model().setData(x, "")
+            return
+        super(DitTableView, self).keyPressEvent(event)
+
     def _getSelectedRows(self):
         selections = set([x.row() for x in self.selectedIndexes()])
         if len(selections) == 0:
@@ -191,7 +198,7 @@ class DitTableView(QtWidgets.QTableView):
         val = self.model().data(pi)
         if filt.match(val):
             self.setCurrentIndex(pi)
-            self.setFocus()
+            # self.setFocus()
             self.scrollTo(pi)
             return True
         else:

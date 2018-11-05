@@ -87,8 +87,9 @@ class DiffRow(list):
 
 class DitItem(QtGui.QStandardItem, QtCore.QObject):
 
-    def __init__(self, *v):
+    def __init__(self, *v, model=None):
         super(QtGui.QStandardItem, self).__init__(*v)
+        self.model = model
         self.diffStyle = None 
         self._updateTypes = {'foregroundColor': (self.setForeground, QtGui.QBrush(QtCore.Qt.NoBrush)),
                              'backgroundColor': (self.setBackground, QtGui.QBrush(QtCore.Qt.NoBrush)),
@@ -106,7 +107,11 @@ class DitItem(QtGui.QStandardItem, QtCore.QObject):
         if self.evalStyle is None:
             self.evalStyle = EvalStyle()
         self.evalStyle.mergeStyle(p)
-        
+
+    def setData(self, value, role):
+        super(DitItem, self).setData(value, role)
+        self.model.runRules(row=self.model.indexFromItem(self).row())
+
     def update(self, changed=True):
         if self.evalStyle is None and self.diffStyle is None:
             if not changed:
@@ -123,8 +128,8 @@ class DitItem(QtGui.QStandardItem, QtCore.QObject):
         for ck, cf in self._updateTypes.items():
             v = getattr(p, ck, None)
             if v is None:
-                if not changed:
-                    continue
+#                if not changed:
+#                    continue
                 cf[0](cf[1])
             else:
                 cf[0](v)
@@ -137,6 +142,7 @@ class DitTableModel(QtGui.QStandardItemModel):
         self.hasDiff = False
         self.rules = {}
         self.itemChanged.connect(self.hasChanged)
+        self.runningRules = False
 
     def hasChanged(self, item):
         self.dataChanged = True
@@ -166,7 +172,7 @@ class DitTableModel(QtGui.QStandardItemModel):
         self.fieldnames = rdr.fieldnames[:]
         self.setHorizontalHeaderLabels(self.fieldnames)
         for r in rdr:
-            items = [DitItem(r[x]) for x in rdr.fieldnames]
+            items = [DitItem(r[x], model=self) for x in rdr.fieldnames]
             self.appendRow(items)
         self.endResetModel()
         self.dataChanged = False
@@ -239,16 +245,23 @@ class DitTableModel(QtGui.QStandardItemModel):
                 inserted += alen
         self.hasDiff = True
 
-    def runRules(self):
+    def runRules(self, row=None):
+        if self.runningRules:
+            return
+        else:
+            self.runningRules = True
         lastRow = None
         rowData = None
         nextRow = None
-        for i in range(self.rowCount()-1,-1,-1):
-            if i == self.rowCount()-1:
+        rowRange = range(self.rowCount()-1, -1, -1) if row is None else [row]
+        for i in rowRange:
+            if nextRow is None:
                 rowData = {self.fieldnames[j]: self.item(i,j).text() for j in range(self.columnCount())}
             else:
                 lastRow = rowData
                 rowData = nextRow
+            if lastRow is None and i < self.rowCount() - 1:
+                lastRow = {self.fieldnames[j]: self.item(i+1,j).text() for j in range(self.columnCount())}
             if i > 0:
                 nextRow = {self.fieldnames[j]: self.item(i-1,j).text() for j in range(self.columnCount())}
             else:
@@ -262,10 +275,11 @@ class DitTableModel(QtGui.QStandardItemModel):
                 for rule in self.rules.get(self.fieldnames[j], []):
                     if evaluator.eval(rule['eval'], r=rowData, lastRow=nextRow, nextRow=lastRow):
                         cellStyle.merge(rule['style'])
-                if not cellStyle.isEmpty():
+                if not cellStyle.isEmpty() or row is not None:
                     item = self.item(i,j)
                     item.evalStyle = cellStyle
                     item.update(changed=False)
+        self.runningRules = False
 
     def dumpDiff(self):
         for i in range(self.rowCount()-1, -1, -1):

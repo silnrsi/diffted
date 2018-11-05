@@ -36,7 +36,7 @@ class GitSupport():
             rev = branch
         else:
             rev = branch + "@{" + modifier + "}"
-        res = check_output("git -C {} show '{}:{}'".format(self.path, rev, self.fname), shell=True).decode('utf-8')
+        res = check_output('git -C {} show "{}:./{}"'.format(self.path, rev, self.fname), shell=True).decode('utf-8')
         return res
 
 class GitToolBar(QtWidgets.QToolBar):

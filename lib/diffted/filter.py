@@ -80,7 +80,8 @@ class FilterEdit(QtWidgets.QWidget):
         self.lineEdit.setText(vals[0])
         self.regBox.setChecked(vals[1])
         if self.checkBox.isChecked() != vals[2]:
-            f.checkBox.setChecked(vals[2])
+            self.checkBox.setChecked(vals[2])
+
 
 class FilterProxy(QtCore.QSortFilterProxyModel):
     def __init__(self, parent=None):
@@ -91,12 +92,19 @@ class FilterProxy(QtCore.QSortFilterProxyModel):
         self.filters = filters
         for i, f in enumerate(filters):
             f.checkBox.stateChanged.connect(self.filterChanged)
+            f.lineEdit.returnPressed.connect(lambda f=f,y=i:self.filterReturn(f, y))
             f.arrow(True).clicked.connect(lambda e,x=f,y=i: x.parent().findNextInColumn(y, x))
             f.arrow(False).clicked.connect(lambda e,x=f,y=i: x.parent().findPrevInColumn(y, x))
 
     @QtCore.pyqtSlot(int)
     def filterChanged(self, state):
         self.invalidateFilter()
+
+    def filterReturn(self, filt, col):
+        if filt.checkBox.isChecked():
+            self.invalidateFilter()
+        else:
+            filt.parent().findNextInColumn(col, filt)
 
     def filterAcceptsRow(self, row, parent):
         m = self.sourceModel()

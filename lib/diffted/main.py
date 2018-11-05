@@ -151,6 +151,8 @@ class Main(QtWidgets.QMainWindow):
         cred = self.credentials.get(githuburl, None)
         if noui:
             return cred
+        if cred is None:
+            cred = {}
         d = GithubCredentialsDialog(url=githuburl, **cred)
         if not d.runDialog(githuburl):
             return None

@@ -279,7 +279,8 @@ class Main(QtWidgets.QMainWindow):
                 settings.setValue("password", v['pwd'])
             settings.endArray()
 
-        self.fileSettings[self.config['datafile']] = self.tableView.getSettings()
+        if 'datafile' in self.config:
+            self.fileSettings[self.config['datafile']] = self.tableView.getSettings()
         settings.beginWriteArray("FileSettings", len(self.fileSettings))
         i = 0
         for k, v in sorted(self.fileSettings.items()):

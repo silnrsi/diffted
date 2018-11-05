@@ -1,8 +1,21 @@
 
 from PyQt5 import QtWidgets, QtGui
-from subprocess import call, check_output, CalledProcessError, DEVNULL
+import subprocess
+from subprocess import call, check_output, CalledProcessError, DEVNULL, PIPE
 from io import StringIO
-import os
+import os, re
+
+def check_output(cmd, **kw):
+    kw['stdin'] = PIPE
+    kw['stderr'] = DEVNULL
+    if hasattr(subprocess, 'STARTUPINFO'):
+        si = subprocess.STARTUPINFO()
+        si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        kw['startupinfo'] = si
+        kw['env'] = os.environ
+    else:
+        kw['shell'] = True
+    return subprocess.check_output(cmd, **kw)
 
 def reldir(fname):
     dirname = os.path.dirname(fname) or '.'
@@ -10,9 +23,12 @@ def reldir(fname):
 
 def gitTestFile(fname):
     path = reldir(fname)
+    if re.match(r"^http[s]?://", fname):
+        return False
     try:
-        res = check_output("git -C {} ls-files --error-unmatch {}".format(path, os.path.basename(fname)),
-                           stderr=DEVNULL, shell=True)
+        res = check_output("git -C {} ls-files --error-unmatch {}".format(path, os.path.basename(fname)))
+    except FileNotFoundError:
+        res = False
     except CalledProcessError:
         res = False
     else:
@@ -23,7 +39,7 @@ class GitSupport():
     def __init__(self, fname):
         self.path = reldir(fname)
         self.fname = os.path.basename(fname)
-        res = check_output("git -C {} branch -a".format(self.path), shell=True).decode('utf-8')
+        res = check_output("git -C {} branch -a".format(self.path)).decode('utf-8')
         self.branches = []
         for x in res.splitlines():
             b = x[2:].strip()
@@ -36,7 +52,7 @@ class GitSupport():
             rev = branch
         else:
             rev = branch + "@{" + modifier + "}"
-        res = check_output('git -C {} show "{}:./{}"'.format(self.path, rev, self.fname), shell=True).decode('utf-8')
+        res = check_output('git -C {} show "{}:./{}"'.format(self.path, rev, self.fname)).decode('utf-8')
         return res
 
 class GitToolBar(QtWidgets.QToolBar):

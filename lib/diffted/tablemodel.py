@@ -181,7 +181,7 @@ class DitTableModel(QtGui.QStandardItemModel):
 
     def saveCsv(self, f):
         writer = csv.DictWriter(f, fieldnames=self.fieldnames, # dialect=self.dialect,
-                    lineterminator = os.linesep, quoting=csv.QUOTE_MINIMAL,
+                    lineterminator = "\n", quoting=csv.QUOTE_MINIMAL,
                     quotechar = '"', escapechar = '\\')
         writer.writeheader()
         for i in range(self.rowCount()):

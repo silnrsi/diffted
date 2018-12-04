@@ -113,6 +113,8 @@ class DitTableView(QtWidgets.QTableView):
             self.setColumnWidth(i, c)
         colmap = {self.model().headerData(i, QtCore.Qt.Horizontal): i for i in range(self.model().columnCount())}
         for k, v in settings['filters'].items():
+            if k not in colmap:
+                continue
             i = colmap[k]
             f = self.horizontalHeader().filters[i]
             f.setFromSettings(v)
@@ -146,52 +148,54 @@ class DitTableView(QtWidgets.QTableView):
         return selections
 
     def _getSelectedColumns(self):
-        selections = set([x.columns() for x in self.selectedIndexes()])
+        selections = set([x.column() for x in self.selectedIndexes()])
         if len(selections) == 0:
             selections = [self.currPos]
+        return selections
 
     def addRowsAbove(self):
         selections = self._getSelectedRows()
         num = len(selections)
         above = min(selections)
-        self.model().insertRows(above, num)
+        self.model().sourceModel().insertRows(above, num)
 
     def addRowsBelow(self):
         selections = self._getSelectedRows()
         num = len(selections)
         below = max(selections) + 1
-        self.model().insertRows(below, num)
+        self.model().sourceModel().insertRows(below, num)
 
     def delRows(self):
         selections = self._getSelectedRows()
         for i in sorted(selections, key=lambda x:-x):
-            self.model().removeRows(i, 1)
+            self.model().sourceModel().removeRows(i, 1)
 
     def addColumnsRight(self):
-        selections = self_getSelectedColumns()
+        selections = self._getSelectedColumns()
         num = len(selections)
         right = max(selections) + 1
-        self.model().insertColumns(right, num)
+        self.model().sourceModel().insertColumns(right, num)
 
     def addColumnsLeft(self):
-        selections = self_getSelectedColumns()
+        selections = self._getSelectedColumns()
         num = len(selections)
         left = max(selections)
-        self.model().insertColumns(left, num)
+        self.model().sourceModel().insertColumns(left, num)
 
     def delColumns(self):
         selections = self._getSelectedColumns()
         for i in sorted(selections, key=lambda x:-x):
-            self.model().removeColumns(i, 1)
+            self.model().sourceModel().removeColumns(i, 1)
 
     def renameColumn(self):
         # this doesn't work, sigh
         hdr = self.horizontalHeader()
         index = hdr.model().index(0, self.currPos)
-        hdr.item(index).setEditable(True)
+        item = self.model().sourceModel().horizontalHeaderItem(self.currPos)
+        item.setEditable(True)
         hdr.setCurrentIndex(index)
         hdr.edit(index)
-        hdr.item(index).setEditable(False)
+        item.setEditable(False)
 
     def gotoMatch(self, row, col, filt):
         pi = self.model().index(row, col)

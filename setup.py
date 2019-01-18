@@ -19,7 +19,7 @@ setup(
         ],
     package_dir = {'':'lib'},
     install_requires=[
-        'PyQt5', 'PyQt5-sip'
+        'PyQt5', 'PyQt5-sip', 'PyGithub'
     ],
 #    package_data={
 #        'oxttools': [

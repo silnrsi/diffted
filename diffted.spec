@@ -16,12 +16,18 @@ a = Analysis(['scripts\\diffted'],
              win_private_assemblies=False,
              cipher=block_cipher,
              noarchive=False)
+
+bins = a.binaries
+if sys.platform == 'win32':
+    for d in ('vcruntime140', ):
+        bins += [(d + '.dll', 'bins/' + d + '.dll', 'BINARY')]
+
 pyz = PYZ(a.pure, a.zipped_data,
              cipher=block_cipher)
 exe = EXE(pyz,
           a.scripts,
 #          options,
-          a.binaries,
+          bins,
           a.zipfiles,
           a.datas,
           [],

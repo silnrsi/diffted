@@ -13,20 +13,20 @@ setup(
     name = 'diffted',
     version = 0.1,
     description = 'Utility to edit csv files with differencing and git',
-    maintainer = 'NRSI - SIL International',
+    maintainer = 'SIL International',
     url = 'http://github.com/silnrsi/diffted',
     packages = ["diffted",
         ],
     package_dir = {'':'lib'},
     install_requires=[
-        'PyQt5', 'PyQt5-sip', 'PyGithub'
+        'PyQt5', 'PyQt5-sip', 'PyGithub', 'PyYAML'
     ],
 #    package_data={
 #        'oxttools': [
 #             'data/*.xml',
 #    ]},
     scripts = ['scripts/diffted'],
-    entrypoints = {
+    entry_points = {
         'console_scripts': [
             'diffted = diffted:entry_point'
         ]

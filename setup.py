@@ -26,6 +26,11 @@ setup(
 #             'data/*.xml',
 #    ]},
     scripts = ['scripts/diffted'],
+    entrypoints = {
+        'console_scripts': [
+            'diffted = diffted:entry_point'
+        ]
+    },
     license = 'MIT',
     platforms = ['Linux','Win32','Mac OS X'],
     classifiers = [

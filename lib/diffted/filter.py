@@ -112,7 +112,7 @@ class FilterProxy(QtCore.QSortFilterProxyModel):
             if f.checkBox.isChecked():
                 t = m.data(m.index(row, i, parent))
                 if t is None:
-                    return False
+                    return True
                 elif not f.isRegex():
                     if not f.lineEdit.text() in t:
                         return False

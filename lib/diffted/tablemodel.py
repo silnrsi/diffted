@@ -267,7 +267,7 @@ class DitTableModel(QtGui.QStandardItemModel):
             else:
                 nextRow = None
             rowStyle = EvalStyle()
-            for rule in self.rules[None]:
+            for rule in self.rules.get(None, []):
                 if evaluator.eval(rule['eval'], r=rowData, lastRow=nextRow, nextRow=lastRow):
                     rowStyle.merge(rule['style'])
             for j in range(self.columnCount()):
